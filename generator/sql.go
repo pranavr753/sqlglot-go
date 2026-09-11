@@ -563,7 +563,8 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 }
 
 func (g *Generator) offsetLimitModifiers(e expressions.Expression, fetch bool, limit expressions.Expression) []string {
-	if fetch {
+	// generators/presto.py:631-637: OFFSET precedes LIMIT in Presto.
+	if fetch || g.isDialect("presto") {
 		return []string{g.sqlKey(e, "offset"), g.gen(limit)}
 	}
 	return []string{g.gen(limit), g.sqlKey(e, "offset")}
@@ -1878,6 +1879,8 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 			typeSQL = g.sqlKey(e, "kind")
 		} else if tv == expressions.DTypeCharacterSet {
 			return "CHAR CHARACTER SET " + g.sqlKey(e, "kind")
+		} else if mapped, ok := g.lookupTypeMapping(tv); ok {
+			typeSQL = mapped
 		} else if mapped, ok := g.typeMappingTable()[tv]; ok {
 			typeSQL = mapped
 		} else {
